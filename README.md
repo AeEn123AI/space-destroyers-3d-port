@@ -16,7 +16,23 @@ third_party/     minimp3, dr_wav, stb_image, stb_image_write, stb_truetype, stb_
 NOTES.md         the Scratch behaviour this port reproduces (timings, quirks, layouts)
 ```
 
-## Building
+## Quick build guide
+1. **Get the game file.** Open *Space Destroyers 3D* on Scratch, click "See inside", then File > Save to your computer.
+   Put the `.sb3` in this folder and name it exactly `Space Destroyers 3D.sb3`. (It isn't included here because the
+   music is Sega's.)
+2. **Install the tools.**
+   - Arch / CachyOS: `sudo pacman -S base-devel sdl2 python-numpy python-pillow librsvg ffmpeg`
+   - Debian / Ubuntu: `sudo apt install build-essential libsdl2-dev libgl-dev python3-numpy python3-pil librsvg2-bin ffmpeg`
+3. **PC build:** run `make pc`, then start `./build/pc/space-destroyers-3d`.
+4. **3DS build (optional):** install [devkitPro](https://devkitpro.org/wiki/Getting_Started), then
+   `sudo dkp-pacman -S 3ds-dev` and run:
+   ```sh
+   export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM
+   make cia    # space-destroyers-3d.cia, install with FBI
+   make 3ds    # space-destroyers-3d.3dsx, for the Homebrew Launcher
+   ```
+
+## Building in detail
 **The game's assets are not included in this repo.** The music is Sega's (SMS BIOS / Space Harrier), so it can't be
 redistributed here. To build, download the original project from Scratch (open the project in the Scratch editor,
 then File > Save to your computer) and put it in the repo root as `Space Destroyers 3D.sb3`. The asset pipeline below
