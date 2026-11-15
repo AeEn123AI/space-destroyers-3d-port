@@ -1,0 +1,7 @@
+build/
+dist/
+*.3dsx
+*.cia
+*.elf
+__pycache__/
+*.sb3

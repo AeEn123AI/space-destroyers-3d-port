@@ -1,0 +1,68 @@
+#---------------------------------------------------------------------------------
+# Space Destroyers 3D - Nintendo 3DS build (devkitARM + libctru + citro2d/citro3d)
+#   make -f Makefile.3ds        -> space-destroyers-3d.3dsx
+#   make -f Makefile.3ds cia    -> space-destroyers-3d.cia (tools/bin/makerom + bannertool)
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+endif
+TOPDIR ?= $(CURDIR)
+include $(DEVKITARM)/3ds_rules
+
+TARGET   := space-destroyers-3d
+BUILD    := build/3ds
+SOURCES  := src/common src/3ds
+INCLUDES := src/common src/3ds third_party
+ROMFS    := build/3ds_romfs
+APP_TITLE       := Space Destroyers 3D
+APP_DESCRIPTION := Space Destroyers 3D by AeEn123
+APP_AUTHOR      := Alfie
+ICON     := build/assets/cia/icon.png
+MAKEROM    ?= $(TOPDIR)/tools/bin/makerom
+BANNERTOOL ?= $(TOPDIR)/tools/bin/bannertool
+
+ARCH     := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+CFLAGS   := -g -Wall -O2 -mword-relocations -ffunction-sections -std=gnu99 $(ARCH) $(INCLUDE) -D__3DS__ $(EXTRA_CFLAGS)
+ASFLAGS  := -g $(ARCH)
+LDFLAGS   = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LIBS     := -lcitro2d -lcitro3d -lctru -lm
+LIBDIRS  := $(CTRULIB)
+
+ifneq ($(notdir $(BUILD)),$(notdir $(CURDIR)))
+export OUTPUT  := $(CURDIR)/$(TARGET)
+export TOPDIR  := $(CURDIR)
+export VPATH   := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export DEPSDIR := $(CURDIR)/$(BUILD)
+CFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export LD      := $(CC)
+export OFILES  := $(CFILES:.c=.o)
+export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
+export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export APP_ICON := $(TOPDIR)/$(ICON)
+export _3DSXFLAGS += --smdh=$(CURDIR)/$(TARGET).smdh --romfs=$(CURDIR)/$(ROMFS)
+export _3DSXDEPS := $(CURDIR)/$(TARGET).smdh
+
+.PHONY: all clean cia romfs
+all: romfs
+	@mkdir -p $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.3ds
+
+romfs:
+	@rm -rf $(ROMFS) && mkdir -p $(ROMFS) && cp build/assets/3ds/* $(ROMFS)/
+
+cia: all
+	@$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_DESCRIPTION)" -p "$(APP_AUTHOR)" \
+		-i $(TOPDIR)/$(ICON) -o $(BUILD)/icon.smdh
+	@$(BANNERTOOL) makebanner -i build/assets/cia/banner.png -a build/assets/cia/banner.wav -o $(BUILD)/banner.bnr
+	$(MAKEROM) -f cia -o $(OUTPUT).cia -elf $(OUTPUT).elf -icon $(BUILD)/icon.smdh \
+		-banner $(BUILD)/banner.bnr -rsf $(CURDIR)/cia/app.rsf -target t -exefslogo
+	@echo built $(OUTPUT).cia
+
+clean:
+	@rm -rf $(BUILD) $(ROMFS) $(TARGET).3dsx $(TARGET).cia $(TARGET).smdh $(TARGET).elf
+else
+$(OUTPUT).3dsx : $(OUTPUT).elf $(_3DSXDEPS)
+$(OUTPUT).elf  : $(OFILES)
+-include $(DEPSDIR)/*.d
+endif
